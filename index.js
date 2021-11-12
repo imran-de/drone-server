@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 require('dotenv').config();
+const ObjectId = require('mongodb').ObjectId;
 // const admin = require("firebase-admin");
 const { MongoClient, MongoRuntimeError } = require('mongodb');
 
@@ -72,6 +73,20 @@ async function run() {
         app.post('/add-product', async (req, res) => {
             const data = req.body;
             const result = await productCollection.insertOne(data);
+            res.json(result);
+        })
+
+        //get all products
+        app.get('/products', async (req, res) => {
+            const result = await productCollection.find({}).toArray();
+            res.json(result);
+        })
+
+        //Delete product 
+        app.delete('/product/:id', async (req, res) => {
+            const id = req?.params?.id;
+            const query = { _id: ObjectId(id) }
+            const result = await productCollection.deleteOne(query);
             res.json(result);
         })
 
