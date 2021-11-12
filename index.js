@@ -66,9 +66,14 @@ async function run() {
                 const result = await usersCollection.updateOne(filter, updateDoc);
                 res.json(result);
             }
-
-            console.log(email);
         });
+
+        //add product api
+        app.post('/add-product', async (req, res) => {
+            const data = req.body;
+            const result = await productCollection.insertOne(data);
+            res.json(result);
+        })
 
     } finally {
         // await client.close();
