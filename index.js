@@ -24,15 +24,7 @@ async function run() {
         const productCollection = database.collection('product');
         const usersCollection = database.collection('users');
         const cartCollection = database.collection('cart');
-        const review = database.collection('reviews');
-
-        //get user
-        app.get('/users/:email', async (req, res) => {
-            const email = req.params.email;
-            const query = { email: email };
-            const user = await usersCollection.findOne(query);
-            res.json(user);
-        })
+        const reviewCollection = database.collection('reviews');
 
         //post user data
         app.post('/user', async (req, res) => {
@@ -51,6 +43,14 @@ async function run() {
             res.json(result);
             console.log(result);
 
+        })
+
+        //get user
+        app.get('/users/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email };
+            const user = await usersCollection.findOne(query);
+            res.json(user);
         })
 
         //make admin api
@@ -88,7 +88,28 @@ async function run() {
         app.get('/orders', async (req, res) => {
             const user = req?.query?.email;
             const query = { email: user };
-            const result = await cartCollection.find(query).sort({ _id: -1 }).toArray();
+            if (user) {
+                const result = await cartCollection.find(query).sort({ _id: -1 }).toArray();
+                res.json(result);
+            } else {
+                const result = await cartCollection.find({}).sort({ _id: -1 }).toArray();
+                res.json(result);
+            }
+        })
+
+        //update orders status
+        app.put('/order', async (req, res) => {
+            const id = req?.query?.id;
+            const status = req?.query?.status;
+            const filter = { _id: ObjectId(id) };
+            let newStatus = '';
+            if (status === "pending") {
+                newStatus = "shipped";
+            } else {
+                newStatus = "pending";
+            }
+            const updateDoc = { $set: { status: newStatus } }
+            const result = await cartCollection.updateOne(filter, updateDoc);
             res.json(result);
         })
 
@@ -97,6 +118,19 @@ async function run() {
             const id = req?.params?.id;
             const query = { _id: ObjectId(id) }
             const result = await cartCollection.deleteOne(query);
+            res.json(result);
+        })
+
+        //add review
+        app.post('/add-review', async (req, res) => {
+            const data = req.body;
+            const result = await reviewCollection.insertOne(data);
+            res.json(result);
+        })
+
+        //get all review
+        app.get('/reviews', async (req, res) => {
+            const result = await reviewCollection.find({}).sort({ _id: -1 }).toArray();
             res.json(result);
         })
 
