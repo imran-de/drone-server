@@ -69,6 +69,37 @@ async function run() {
             }
         });
 
+        //get single product api
+        app.get('/product/:id', async (req, res) => {
+            const id = req?.params?.id;
+            const query = { _id: ObjectId(id) };
+            const result = await productCollection.findOne(query);
+            res.json(result);
+        })
+
+        //add new order
+        app.post('/add-order', async (req, res) => {
+            const data = req.body;
+            const result = await cartCollection.insertOne(data);
+            res.json(result);
+        })
+
+        //get orders
+        app.get('/orders', async (req, res) => {
+            const user = req?.query?.email;
+            const query = { email: user };
+            const result = await cartCollection.find(query).sort({ _id: -1 }).toArray();
+            res.json(result);
+        })
+
+        //delete order
+        app.delete('/order/:id', async (req, res) => {
+            const id = req?.params?.id;
+            const query = { _id: ObjectId(id) }
+            const result = await cartCollection.deleteOne(query);
+            res.json(result);
+        })
+
         //add product api
         app.post('/add-product', async (req, res) => {
             const data = req.body;
@@ -76,10 +107,17 @@ async function run() {
             res.json(result);
         })
 
-        //get all products
+        //get all products , also limit call
         app.get('/products', async (req, res) => {
-            const result = await productCollection.find({}).toArray();
-            res.json(result);
+            const qty = req.query?.limit;
+            //check if api bring any limit value or not
+            if (qty) {
+                const result = await productCollection.find({}).sort({ _id: -1 }).limit(parseInt(qty)).toArray();
+                res.json(result);
+            } else {
+                const result = await productCollection.find({}).sort({ _id: -1 }).toArray();
+                res.json(result);
+            }
         })
 
         //Delete product 
