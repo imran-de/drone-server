@@ -2,11 +2,20 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 require('dotenv').config();
+const admin = require("firebase-admin");
 const ObjectId = require('mongodb').ObjectId;
-// const admin = require("firebase-admin");
 const { MongoClient, MongoRuntimeError } = require('mongodb');
 
 const port = process.env.PORT || 5000;
+
+// firebase token authorization
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+
+// const serviceAccount = require('./drone-45254-firebase-adminsdk-gw3mu-2afdeb4a3e.json');
+
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+});
 
 // middleware
 app.use(cors());
@@ -16,6 +25,22 @@ app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.5okll.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
+//verify token function
+async function verifyToken(req, res, next) {
+    if (req?.headers?.authorization?.startsWith('Bearer ')) {
+        const token = req.headers.authorization.split(' ')[1];
+
+        try {
+            const decodedUser = await admin.auth().verifyIdToken(token);
+            req.decodedEmail = decodedUser.email;
+        }
+        catch {
+
+        }
+    }
+    next();
+}
+// database connect and operation
 async function run() {
     try {
         await client.connect();
@@ -53,19 +78,30 @@ async function run() {
         })
 
         //make admin api
-        app.post('/users/admin', async (req, res) => {
+        app.post('/users/admin', verifyToken, async (req, res) => {
             const email = req?.body?.email;
-            const filter = { email: email };
-            const updateDoc = { $set: { role: 'admin' } };
-            const user = await usersCollection.findOne(filter);
-            if (user?.role === 'admin') {
-                res.json({ message: "The user already have admin access, no need to make admin again", from: 'alreadyAdmin' });
-            } else if (user === null) {
-                res.json({ message: "The user not found! check email and try again", from: 'noEmail' });
-            } else {
-                const result = await usersCollection.updateOne(filter, updateDoc);
-                res.json(result);
+            const requester = req?.decodedEmail;
+            if (requester) {
+                const requesterAccount = await usersCollection.findOne({ email: requester });
+                if (requesterAccount?.role === 'admin') {
+                    const filter = { email: email };
+                    const updateDoc = { $set: { role: 'admin' } };
+                    const user = await usersCollection.findOne(filter);
+
+                    if (user?.role === 'admin') {
+                        res.json({ message: "The user already have admin access, no need to make admin again", from: 'alreadyAdmin' });
+                    } else if (user === null) {
+                        res.json({ message: "The user not found! check email and try again", from: 'noEmail' });
+                    } else {
+                        const result = await usersCollection.updateOne(filter, updateDoc);
+                        res.json(result);
+                    }
+                }
             }
+            else {
+                res.status(403).json({ message: 'you do not have to permision to make admin this user!' })
+            }
+
         });
 
         //get single product api
