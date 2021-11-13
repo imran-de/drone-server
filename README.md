@@ -7,6 +7,7 @@ This project is for selling drone's server [Server Live site of drone](https://i
 - mongodb for data store
 - dotenv for hide sensitive information
 - code live on heroku.
+- jwt token for verify user
 
 ## Functionality
 - Save users information
