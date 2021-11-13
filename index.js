@@ -38,10 +38,9 @@ async function run() {
             const data = req.body;
             const filter = { email: data.email };
             const options = { upsert: true };
-            const updateDoc = { set: data };
+            const updateDoc = { $set: data };
             const result = await usersCollection.updateOne(filter, updateDoc, options);
             res.json(result);
-            console.log(result);
 
         })
 
