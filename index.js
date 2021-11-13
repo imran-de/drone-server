@@ -2,8 +2,8 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 require('dotenv').config();
-const admin = require("firebase-admin");
 const ObjectId = require('mongodb').ObjectId;
+const admin = require("firebase-admin");
 const { MongoClient, MongoRuntimeError } = require('mongodb');
 
 const port = process.env.PORT || 5000;
@@ -11,7 +11,7 @@ const port = process.env.PORT || 5000;
 // firebase token authorization
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
-// const serviceAccount = require('./drone-45254-firebase-adminsdk-gw3mu-2afdeb4a3e.json');
+// const serviceAccount = require('./doctors-portal-firebase-adminsdk.json');
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
@@ -120,66 +120,40 @@ async function run() {
         })
 
         //get orders
-        app.get('/orders', verifyToken, async (req, res) => {
+        app.get('/orders', async (req, res) => {
             const user = req?.query?.email;
             const query = { email: user };
-            const requester = req?.decodedEmail;
-            if (requester === user) {
-                if (user) {
-                    const result = await cartCollection.find(query).sort({ _id: -1 }).toArray();
-                    res.json(result);
-                } else {
-                    const result = await cartCollection.find({}).sort({ _id: -1 }).toArray();
-                    res.json(result);
-                }
-            }
-            else {
-                res.status(403).json({ message: 'you do not have to permision to see order!' })
+            if (user) {
+                const result = await cartCollection.find(query).sort({ _id: -1 }).toArray();
+                res.json(result);
+            } else {
+                const result = await cartCollection.find({}).sort({ _id: -1 }).toArray();
+                res.json(result);
             }
         })
 
         //update orders status
-        app.put('/order', verifyToken, async (req, res) => {
+        app.put('/order', async (req, res) => {
             const id = req?.query?.id;
             const status = req?.query?.status;
-            const requester = req?.decodedEmail;
-            if (requester === user) {
-                const requesterAccount = await usersCollection.findOne({ email: requester });
-                if (requesterAccount?.role === 'admin') {
-                    const filter = { _id: ObjectId(id) };
-                    let newStatus = '';
-                    if (status === "pending") {
-                        newStatus = "shipped";
-                    } else {
-                        newStatus = "pending";
-                    }
-                    const updateDoc = { $set: { status: newStatus } }
-                    const result = await cartCollection.updateOne(filter, updateDoc);
-                    res.json(result);
-                } else {
-                    res.json({ message: "you don't have to permission to change status" })
-                }
-
+            const filter = { _id: ObjectId(id) };
+            let newStatus = '';
+            if (status === "pending") {
+                newStatus = "shipped";
+            } else {
+                newStatus = "pending";
             }
-            else {
-                res.status(403).json({ message: 'you do not have to permision to change order!' })
-            }
-
+            const updateDoc = { $set: { status: newStatus } }
+            const result = await cartCollection.updateOne(filter, updateDoc);
+            res.json(result);
         })
 
         //delete order
-        app.delete('/order/:id', verifyToken, async (req, res) => {
+        app.delete('/order/:id', async (req, res) => {
             const id = req?.params?.id;
-            const requester = req?.decodedEmail;
-            if (requester === user) {
-                const query = { _id: ObjectId(id) }
-                const result = await cartCollection.deleteOne(query);
-                res.json(result);
-            }
-            else {
-                res.status(403).json({ message: 'you do not have to permision to change !' })
-            }
-
+            const query = { _id: ObjectId(id) }
+            const result = await cartCollection.deleteOne(query);
+            res.json(result);
         })
 
         //add review
@@ -196,23 +170,10 @@ async function run() {
         })
 
         //add product api
-        app.post('/add-product', verifyToken, async (req, res) => {
+        app.post('/add-product', async (req, res) => {
             const data = req.body;
-            const requester = req?.decodedEmail;
-            if (requester === user) {
-                const requesterAccount = await usersCollection.findOne({ email: requester });
-                if (requesterAccount?.role === 'admin') {
-                    const result = await productCollection.insertOne(data);
-                    res.json(result);
-                } else {
-                    res.json({ message: "you don't have to permission to add product" })
-                }
-
-            }
-            else {
-                res.status(403).json({ message: 'you do not have to permision to change !' })
-            }
-
+            const result = await productCollection.insertOne(data);
+            res.json(result);
         })
 
         //get all products , also limit call
@@ -229,24 +190,11 @@ async function run() {
         })
 
         //Delete product 
-        app.delete('/product/:id', verifyToken, async (req, res) => {
+        app.delete('/product/:id', async (req, res) => {
             const id = req?.params?.id;
             const query = { _id: ObjectId(id) }
-            const requester = req?.decodedEmail;
-            if (requester === user) {
-                const requesterAccount = await usersCollection.findOne({ email: requester });
-                if (requesterAccount?.role === 'admin') {
-                    const result = await productCollection.deleteOne(query);
-                    res.json(result);
-                } else {
-                    res.json({ message: "you don't have to permission to delete product" })
-                }
-
-            }
-            else {
-                res.status(403).json({ message: 'you do not have to permision to change!' })
-            }
-
+            const result = await productCollection.deleteOne(query);
+            res.json(result);
         })
 
     } finally {
